@@ -28,6 +28,16 @@ Found 2 project(s):
 2. Example Docs (64a1f2c9e4b0a1b2c3d4e5f7)
 ```
 
+## Signing up
+
+No account yet? Create one from the terminal — the generated password prints
+exactly once, and the session is stored so every other command works
+immediately:
+
+```bash
+tutorializer signup --email founder@example.com --json
+```
+
 ## Authentication
 
 Two ways in:

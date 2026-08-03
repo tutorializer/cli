@@ -7,6 +7,7 @@ const speechesCommand = require('./speechesCommand.js')
 const projectsCommand = require('./projectsCommand.js')
 const videosCommand = require('./videosCommand.js')
 const tutorialsCommand = require('./tutorialsCommand.js')
+const signupCommand = require('./signupCommand.js')
 const loginCommand = require('./loginCommand.js')
 const logoutCommand = require('./logoutCommand.js')
 const schemaCommand = require('./schemaCommand.js')
@@ -20,6 +21,9 @@ program
   .addCommand(projectsCommand())
   .addCommand(videosCommand())
   .addCommand(tutorialsCommand())
+  // `signup` before `login`: an agent with no account can create one and land
+  // in the same ~/.tutorializer/ session the browser flow writes.
+  .addCommand(signupCommand())
   .addCommand(loginCommand())
   .addCommand(logoutCommand())
   // The shared factory needs this file's directory to find the bundled

@@ -1,0 +1,23 @@
+/* Copyright 2026 Tutorializer LLC */
+const agentfirstSignupCommand = require('@monorepool/agentfirst/signupCommand.js')
+const getApiUrl = require('./getApiUrl.js')
+const getAppUrl = require('./getAppUrl.js')
+const session = require('./session.js')
+
+// The step that used to need a person. `login` assumes the account already
+// exists; an agent pointed at tutorializer.com for the first time has none to
+// log into, and the browser flow it fell into blocked on a window nobody was
+// there to complete.
+//
+//   tutorializer signup --email founder@example.com --json
+//
+// stores the session in the same ~/.tutorializer/ the browser flow writes, so
+// every other command works immediately afterwards.
+module.exports = function signupCommand() {
+  return agentfirstSignupCommand({
+    binaryName: 'tutorializer',
+    getApiUrl,
+    appUrl: getAppUrl(),
+    session,
+  })
+}
