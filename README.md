@@ -17,7 +17,7 @@ Requires Node.js 18 or newer.
 ## Quick start
 
 ```bash
-tutorializer login            # opens the browser to authorize the CLI
+tutorializer login            # browser or API-key login (interactive chooser)
 tutorializer projects list    # your projects with their ids
 tutorializer videos list --projectId PROJECT_ID
 ```
@@ -30,19 +30,37 @@ Found 2 project(s):
 
 ## Authentication
 
-`tutorializer login` starts a temporary localhost server, opens your browser
-to app.tutorializer.com, and receives the session tokens on the redirect
-back. Tokens are stored in `~/.tutorializer/` and reused by every later
-command; `tutorializer logout` clears them. A command run without a valid
-session prints `Please login first` and starts the browser flow on its own.
+Two ways in:
+
+- **Browser session** — `tutorializer login --browser` starts a temporary
+  localhost server, opens your browser to app.tutorializer.com, and receives
+  the session tokens on the redirect back. Tokens are stored in
+  `~/.tutorializer/` and reused by every later command.
+- **API key** — `tutorializer login --with-key` prompts (masked — never a
+  command argument) for an API key secret created in the app, verifies it
+  with one authenticated call, and stores it. Alternatively export
+  `TUTORIALIZER_API_KEY=<key secret>` and skip the login step entirely — the
+  key is read from the environment at request time. New keys default to
+  read-only scopes; widen a key in the app before using write commands.
+
+A stored browser session takes precedence over a stored key, which takes
+precedence over `TUTORIALIZER_API_KEY`. `tutorializer logout` clears the
+stored session and any stored key (an environment key stays in effect).
+
+Without credentials, a command run in an interactive terminal starts the
+browser login on its own; run non-interactively (no TTY) it fails immediately
+with exit code 1 and login instructions on stderr — it never opens a browser
+headlessly.
 
 ## Commands
 
 ### Session
 
 ```bash
-tutorializer login    # log in via browser; tokens land in ~/.tutorializer/
-tutorializer logout   # clear the stored session
+tutorializer login              # choose browser or API key interactively
+tutorializer login --browser    # log in via browser; tokens land in ~/.tutorializer/
+tutorializer login --with-key   # paste an API key secret (masked prompt)
+tutorializer logout             # clear the stored session and any stored key
 ```
 
 ### Projects
@@ -111,6 +129,25 @@ tutorializer skills list               # names and descriptions of the bundled a
 tutorializer skills get tutorializer   # print a bundled SKILL.md to stdout
 ```
 
+### Schema
+
+```bash
+tutorializer schema                    # the whole command tree as JSON
+tutorializer schema speeches list      # just that command's options and arguments
+```
+
+## JSON output
+
+Every data and mutation subcommand accepts `--json`: real, parseable JSON on
+stdout with no color. Lists and reads print the records; mutations print a
+small result object such as `{ "ok": true, "id": "…" }`. Failures print a
+single-line JSON error object on stderr and exit with code 1:
+
+```bash
+tutorializer projects list --json
+tutorializer speeches delete SPEECH_ID --json   # {"ok": true, "id": "…"}
+```
+
 ## Configuration
 
 A `tutorializer.json` in the working directory (or any parent) supplies the
@@ -121,8 +158,11 @@ default `--projectId`:
 ```
 
 Explicit `--projectId` flags win over the config file. `TUTORIALIZER_API_URL`
-overrides the API endpoint (default `https://api.tutorializer.com`) — only
-needed against a non-production deployment.
+overrides the API endpoint (default `https://api.tutorializer.com`) and
+`TUTORIALIZER_APP_URL` the browser-login origin (default
+`https://app.tutorializer.com`) — only needed against a non-production
+deployment. `TUTORIALIZER_API_KEY` supplies an API key secret for headless
+use (see Authentication).
 
 ## Usage with AI agents
 

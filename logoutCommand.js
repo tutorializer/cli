@@ -1,22 +1,11 @@
 /* Copyright 2026 Tutorializer LLC */
-const commander = require('commander')
-const clearSession = require('./session/clearSession.js')
+const agentfirstLogoutCommand = require('@monorepool/agentfirst/logoutCommand.js')
+const session = require('./session.js')
 
-function logoutCommand() {
-  const command = new commander.Command('logout')
-  command.action(async () => {
-    try {
-      console.log('logout')
-
-      clearSession()
-
-      console.log('logged out')
-    } catch (error) {
-      console.log('error', error)
-    }
+module.exports = function logoutCommand() {
+  return agentfirstLogoutCommand({
+    binaryName: 'tutorializer',
+    session,
+    envKeyName: 'TUTORIALIZER_API_KEY',
   })
-
-  return command
 }
-
-module.exports = logoutCommand
