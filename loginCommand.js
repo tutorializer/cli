@@ -1,11 +1,12 @@
 /* Copyright 2026 Tutorializer LLC */
-const agentfirstLoginCommand = require('@monorepool/agentfirst/loginCommand.js')
-const {
-  setApiKeyForTutorializerClient,
-} = require('@tutorializer/client/apiKey.js')
-const get = require('@tutorializer/client/get.js').default
-const getAppUrl = require('./getAppUrl.js')
-const session = require('./session.js')
+import agentfirstLoginCommand from '@monorepool/agentfirst/loginCommand.js'
+import { setApiKeyForTutorializerClient } from '@tutorializer/client/apiKey.js'
+import get from '@tutorializer/client/get.js'
+
+import getApiUrl from './getApiUrl.js'
+import getAppUrl from './getAppUrl.js'
+import packageJson from './package.json' with { type: 'json' }
+import session from './session.js'
 
 // One cheap authenticated GET so a bad key fails at login instead of at the
 // first real command. The key is fed straight to the bundled client (which
@@ -30,10 +31,16 @@ async function verify() {
   return `Logged in with an API key — ${projects.length} project(s) visible.`
 }
 
-module.exports = function loginCommand() {
+// `--browser` opens app.tutorializer.com/cli and prints a one-time code
+// beside it, so the login can also be finished from another device;
+// `--device` approves that code from a phone or another computer, with no
+// browser on this machine.
+export default function loginCommand() {
   return agentfirstLoginCommand({
     binaryName: 'tutorializer',
     appUrl: getAppUrl(),
+    getApiUrl,
+    version: packageJson.version,
     session,
     envKeyName: 'TUTORIALIZER_API_KEY',
     verify,

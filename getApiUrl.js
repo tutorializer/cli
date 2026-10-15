@@ -5,10 +5,9 @@
 // URL resolver): the internal domain/port registry never enters the npm
 // bundle. TUTORIALIZER_API_URL overrides for non-production deployments.
 //
-// Deliberately CommonJS and dependency-free rather than a re-export of
-// cliGetUrl.js: that module is ESM and only ever reached through the esbuild
-// alias, so requiring it here would break `node index.js` and the skills
-// package's drift test, both of which load these factories unbundled.
-module.exports = function getApiUrl() {
+// Deliberately dependency-free rather than a re-export of cliGetUrl.js: that
+// module is only reached through the esbuild alias, while `node index.js` and
+// the skills drift test import these factories unbundled.
+export default function getApiUrl() {
   return process.env.TUTORIALIZER_API_URL || 'https://api.tutorializer.com'
 }

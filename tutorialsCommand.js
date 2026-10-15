@@ -1,11 +1,13 @@
 /* Copyright 2026 Tutorializer LLC */
-const { inspect } = require('node:util')
-const commander = require('commander')
-const { printJson, withJson, fail } = require('@monorepool/agentfirst/output.js')
-const ensureAuth = require('./ensureAuth.js')
-const getConfig = require('./getConfig.js')
-const getTutorials = require('@tutorializer/client/getTutorials.js').default
-const getTutorial = require('@tutorializer/client/getTutorial.js').default
+import { inspect } from 'node:util'
+
+import { fail, printJson, withJson } from '@monorepool/agentfirst/output.js'
+import getTutorial from '@tutorializer/client/getTutorial.js'
+import getTutorials from '@tutorializer/client/getTutorials.js'
+import commander from 'commander'
+
+import ensureAuth from './ensureAuth.js'
+import getConfig from './getConfig.js'
 
 function tutorialsCommand() {
   const command = new commander.Command('tutorials')
@@ -28,7 +30,9 @@ function tutorialsCommand() {
       const parameters = {
         limit: options.limit || 10,
       }
-      if (projectId) parameters.projectId = projectId
+      if (projectId) {
+        parameters.projectId = projectId
+      }
 
       const tutorials = await getTutorials(parameters)
 
@@ -80,7 +84,9 @@ function tutorialsCommand() {
         const parameters = {
           limit: options.limit || 10,
         }
-        if (projectId) parameters.projectId = projectId
+        if (projectId) {
+          parameters.projectId = projectId
+        }
         const tutorials = await getTutorials(parameters)
         if (options.json) {
           printJson(tutorials)
@@ -131,15 +137,33 @@ function tutorialsCommand() {
       console.log()
 
       const fields = []
-      if (tutorial.name) fields.push(`${cyan('name')}  ${tutorial.name}`)
-      if (tutorial.email) fields.push(`${cyan('email')}  ${tutorial.email}`)
-      if (tutorial.phone) fields.push(`${cyan('phone')}  ${tutorial.phone}`)
-      if (tutorial.language) fields.push(`${cyan('language')}  ${tutorial.language}`)
-      if (tutorial.color) fields.push(`${cyan('color')}  ${tutorial.color}`)
-      if (tutorial.projectId) fields.push(`${cyan('projectId')}  ${tutorial.projectId}`)
-      if (tutorial.organizationId) fields.push(`${cyan('organizationId')}  ${tutorial.organizationId}`)
-      if (tutorial.creationTime) fields.push(`${cyan('created')}  ${tutorial.creationTime}`)
-      if (tutorial.lastEditTime) fields.push(`${cyan('edited')}   ${tutorial.lastEditTime}`)
+      if (tutorial.name) {
+        fields.push(`${cyan('name')}  ${tutorial.name}`)
+      }
+      if (tutorial.email) {
+        fields.push(`${cyan('email')}  ${tutorial.email}`)
+      }
+      if (tutorial.phone) {
+        fields.push(`${cyan('phone')}  ${tutorial.phone}`)
+      }
+      if (tutorial.language) {
+        fields.push(`${cyan('language')}  ${tutorial.language}`)
+      }
+      if (tutorial.color) {
+        fields.push(`${cyan('color')}  ${tutorial.color}`)
+      }
+      if (tutorial.projectId) {
+        fields.push(`${cyan('projectId')}  ${tutorial.projectId}`)
+      }
+      if (tutorial.organizationId) {
+        fields.push(`${cyan('organizationId')}  ${tutorial.organizationId}`)
+      }
+      if (tutorial.creationTime) {
+        fields.push(`${cyan('created')}  ${tutorial.creationTime}`)
+      }
+      if (tutorial.lastEditTime) {
+        fields.push(`${cyan('edited')}   ${tutorial.lastEditTime}`)
+      }
 
       if (fields.length > 0) {
         fields.forEach(line => console.log(line))
@@ -154,4 +178,4 @@ function tutorialsCommand() {
   return command
 }
 
-module.exports = tutorialsCommand
+export default tutorialsCommand

@@ -1,12 +1,14 @@
 /* Copyright 2026 Tutorializer LLC */
-const { inspect } = require('node:util')
-const commander = require('commander')
-const { printJson, withJson, fail } = require('@monorepool/agentfirst/output.js')
-const ensureAuth = require('./ensureAuth.js')
-const getConfig = require('./getConfig.js')
-const getProjects = require('@tutorializer/client/getProjects.js').default
-const getProject = require('@tutorializer/client/getProject.js').default
-const addProject = require('@tutorializer/client/addProject.js').default
+import { inspect } from 'node:util'
+
+import { fail, printJson, withJson } from '@monorepool/agentfirst/output.js'
+import addProject from '@tutorializer/client/addProject.js'
+import getProject from '@tutorializer/client/getProject.js'
+import getProjects from '@tutorializer/client/getProjects.js'
+import commander from 'commander'
+
+import ensureAuth from './ensureAuth.js'
+import getConfig from './getConfig.js'
 
 function projectsCommand() {
   const command = new commander.Command('projects')
@@ -49,18 +51,20 @@ function projectsCommand() {
     }
   })
 
-  // tutorializer projects get [projectId]
+  // tutorializer projects get [projectIdOrVanityId]
   withJson(
     command
-      .command('get [projectId]')
-      .description('get projects (raw JSON), or a single project by id')
+      .command('get [projectIdOrVanityId]')
+      .description(
+        'get projects (raw JSON), or a single project by id or vanity id',
+      )
       .option('-n, --limit [limit]', 'limit number of results'),
-  ).action(async (projectId, options) => {
+  ).action(async (projectIdOrVanityId, options) => {
     try {
       await ensureAuth()
 
-      if (projectId) {
-        const project = await getProject(projectId)
+      if (projectIdOrVanityId) {
+        const project = await getProject(projectIdOrVanityId)
 
         if (project) {
           if (options.json) {
@@ -92,16 +96,18 @@ function projectsCommand() {
     }
   })
 
-  // tutorializer projects read <projectId>
+  // tutorializer projects read <projectIdOrVanityId>
   withJson(
     command
-      .command('read <projectId>')
-      .description('read a project formatted for the terminal'),
-  ).action(async (projectId, options) => {
+      .command('read <projectIdOrVanityId>')
+      .description(
+        'read a project by id or vanity id, formatted for the terminal',
+      ),
+  ).action(async (projectIdOrVanityId, options) => {
     try {
       await ensureAuth()
 
-      const project = await getProject(projectId)
+      const project = await getProject(projectIdOrVanityId)
 
       if (!project) {
         if (options.json) {
@@ -127,16 +133,34 @@ function projectsCommand() {
       const name = project.name || project._id
       console.log(bold(name))
       const meta = [project._id]
-      if (project.domain) meta.push(project.domain)
+      if (project.vanityId) {
+        meta.push(project.vanityId)
+      }
+      if (project.domain) {
+        meta.push(project.domain)
+      }
       console.log(dim(meta.join('  ·  ')))
       console.log()
 
       const fields = []
-      if (project.name) fields.push(`${cyan('name')}  ${project.name}`)
-      if (project.domain) fields.push(`${cyan('domain')}  ${project.domain}`)
-      if (project.organizationId) fields.push(`${cyan('organizationId')}  ${project.organizationId}`)
-      if (project.creationTime) fields.push(`${cyan('created')}  ${project.creationTime}`)
-      if (project.lastEditTime) fields.push(`${cyan('edited')}   ${project.lastEditTime}`)
+      if (project.name) {
+        fields.push(`${cyan('name')}  ${project.name}`)
+      }
+      if (project.vanityId) {
+        fields.push(`${cyan('vanityId')}  ${project.vanityId}`)
+      }
+      if (project.domain) {
+        fields.push(`${cyan('domain')}  ${project.domain}`)
+      }
+      if (project.organizationId) {
+        fields.push(`${cyan('organizationId')}  ${project.organizationId}`)
+      }
+      if (project.creationTime) {
+        fields.push(`${cyan('created')}  ${project.creationTime}`)
+      }
+      if (project.lastEditTime) {
+        fields.push(`${cyan('edited')}   ${project.lastEditTime}`)
+      }
 
       if (fields.length > 0) {
         fields.forEach(line => console.log(line))
@@ -159,7 +183,9 @@ function projectsCommand() {
       await ensureAuth()
 
       const body = { name }
-      if (options.domain) body.domain = options.domain
+      if (options.domain) {
+        body.domain = options.domain
+      }
 
       const project = await addProject(body)
 
@@ -168,11 +194,17 @@ function projectsCommand() {
           ok: true,
           id: project._id,
           name: project.name,
+          vanityId: project.vanityId,
           domain: project.domain,
         })
       } else {
         console.log(`Created project: ${project.name} (${project._id})`)
-        if (project.domain) console.log(`Domain: ${project.domain}`)
+        if (project.vanityId) {
+          console.log(`Vanity ID: ${project.vanityId}`)
+        }
+        if (project.domain) {
+          console.log(`Domain: ${project.domain}`)
+        }
       }
     } catch (error) {
       fail(error, { json: options.json })
@@ -383,4 +415,4 @@ function projectsCommand() {
   return command
 }
 
-module.exports = projectsCommand
+export default projectsCommand

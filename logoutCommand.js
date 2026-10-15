@@ -1,8 +1,9 @@
 /* Copyright 2026 Tutorializer LLC */
-const agentfirstLogoutCommand = require('@monorepool/agentfirst/logoutCommand.js')
-const session = require('./session.js')
+import agentfirstLogoutCommand from '@monorepool/agentfirst/logoutCommand.js'
 
-module.exports = function logoutCommand() {
+import session from './session.js'
+
+export default function logoutCommand() {
   return agentfirstLogoutCommand({
     binaryName: 'tutorializer',
     session,

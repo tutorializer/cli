@@ -1,18 +1,125 @@
 /* Copyright 2026 Tutorializer LLC */
-const { inspect } = require('node:util')
-const commander = require('commander')
-const inquirer = require('inquirer')
-const { printJson, withJson, fail } = require('@monorepool/agentfirst/output.js')
-const ensureAuth = require('./ensureAuth.js')
-const getConfig = require('./getConfig.js')
-const getSpeeches = require('@tutorializer/client/getSpeeches.js').default
-const getSpeech = require('@tutorializer/client/getSpeech.js').default
-const updateSpeech = require('@tutorializer/client/updateSpeech.js').default
-const deleteSpeech = require('@tutorializer/client/deleteSpeech.js').default
+import { mkdir, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import { inspect } from 'node:util'
+
+import { fail, printJson, withJson } from '@monorepool/agentfirst/output.js'
+import addSpeech from '@tutorializer/client/addSpeech.js'
+import deleteSpeech from '@tutorializer/client/deleteSpeech.js'
+import getSpeech from '@tutorializer/client/getSpeech.js'
+import getSpeeches from '@tutorializer/client/getSpeeches.js'
+import updateSpeech from '@tutorializer/client/updateSpeech.js'
+import commander from 'commander'
+import inquirer from 'inquirer'
+
+import ensureAuth from './ensureAuth.js'
+import getConfig from './getConfig.js'
+
+async function saveSpeechAssets(speech, output) {
+  if (!speech.url) {
+    throw new Error('Tutorializer returned a speech without an audio URL')
+  }
+
+  const audioPath = path.resolve(output)
+  const response = await fetch(speech.url)
+  if (!response.ok) {
+    throw new Error(
+      `Couldn't download generated speech: ${response.status} ${response.statusText}`,
+    )
+  }
+
+  await mkdir(path.dirname(audioPath), { recursive: true })
+  await writeFile(audioPath, Buffer.from(await response.arrayBuffer()))
+
+  let alignmentPath
+  if (speech.alignment) {
+    alignmentPath = /\.mp3$/iu.test(audioPath)
+      ? audioPath.replace(/\.mp3$/iu, '.json')
+      : `${audioPath}.json`
+    await writeFile(
+      alignmentPath,
+      `${JSON.stringify(speech.alignment, null, 2)}\n`,
+    )
+  }
+
+  return { audioPath, alignmentPath }
+}
 
 function speechesCommand() {
   const command = new commander.Command('speeches')
   command.description('manage speeches')
+
+  // tutorializer speeches create <text>
+  withJson(
+    command
+      .command('create <text>')
+      .description(
+        'synthesize speech with ElevenLabs (the default Tutorializer provider)',
+      )
+      .option(
+        '--projectId [projectId]',
+        'project id (defaults to tutorializer.json)',
+      )
+      .option('--language <language>', 'language code', 'en')
+      .option('--provider <provider>', 'speech provider', 'elevenlabs')
+      .option(
+        '--voice <voice>',
+        'ElevenLabs voice id (defaults to the project)',
+      )
+      .option('--translated-text <text>', 'pre-translated narration text')
+      .option('--output <path>', 'download MP3 and alignment JSON'),
+  ).action(async (text, options) => {
+    try {
+      await ensureAuth()
+
+      const projectId = options.projectId || getConfig()?.projectId
+      if (!projectId) {
+        throw new Error(
+          'missing projectId (pass --projectId or set it in tutorializer.json)',
+        )
+      }
+
+      const speech = await addSpeech({
+        projectId,
+        text,
+        language: options.language,
+        provider: options.provider,
+        ...(options.voice && { voice: options.voice }),
+        ...(options.translatedText && {
+          translatedText: options.translatedText,
+        }),
+      })
+      const assets = options.output
+        ? await saveSpeechAssets(speech, options.output)
+        : {}
+      const provider = speech.provider || 'elevenlabs'
+
+      if (options.json) {
+        printJson({
+          ok: true,
+          id: speech._id,
+          url: speech.url,
+          provider,
+          voice: speech.voice,
+          duration: speech.duration,
+          ...assets,
+        })
+      } else {
+        console.log(
+          `Created ${provider} speech: ${speech._id} (${speech.language})`,
+        )
+        console.log(speech.url)
+        if (assets.audioPath) {
+          console.log(`Audio: ${assets.audioPath}`)
+        }
+        if (assets.alignmentPath) {
+          console.log(`Alignment: ${assets.alignmentPath}`)
+        }
+      }
+    } catch (error) {
+      fail(error, { json: options.json })
+    }
+  })
 
   // tutorializer speeches list
   withJson(
@@ -32,8 +139,12 @@ function speechesCommand() {
       const parameters = {
         limit: options.limit || 10,
       }
-      if (projectId) parameters.projectId = projectId
-      if (options.language) parameters.language = options.language
+      if (projectId) {
+        parameters.projectId = projectId
+      }
+      if (options.language) {
+        parameters.language = options.language
+      }
 
       const speeches = await getSpeeches(parameters)
 
@@ -91,8 +202,12 @@ function speechesCommand() {
         const parameters = {
           limit: options.limit || 10,
         }
-        if (projectId) parameters.projectId = projectId
-        if (options.language) parameters.language = options.language
+        if (projectId) {
+          parameters.projectId = projectId
+        }
+        if (options.language) {
+          parameters.language = options.language
+        }
         const speeches = await getSpeeches(parameters)
         if (options.json) {
           printJson(speeches)
@@ -139,20 +254,46 @@ function speechesCommand() {
       console.log()
       console.log(bold(speech._id))
       const meta = [speech._id]
-      if (speech.language) meta.push(speech.language)
+      if (speech.language) {
+        meta.push(speech.language)
+      }
       console.log(dim(meta.join('  ·  ')))
       console.log()
 
       const fields = []
-      if (speech.text) fields.push(`${cyan('text')}  ${speech.text}`)
-      if (speech.language) fields.push(`${cyan('language')}  ${speech.language}`)
-      if (speech.translatedText) fields.push(`${cyan('translatedText')}  ${speech.translatedText}`)
-      if (speech.url) fields.push(`${cyan('url')}  ${speech.url}`)
-      if (speech.duration) fields.push(`${cyan('duration')}  ${speech.duration}`)
-      if (speech.projectId) fields.push(`${cyan('projectId')}  ${speech.projectId}`)
-      if (speech.tutorialId) fields.push(`${cyan('tutorialId')}  ${speech.tutorialId}`)
-      if (speech.creationTime) fields.push(`${cyan('created')}  ${speech.creationTime}`)
-      if (speech.lastEditTime) fields.push(`${cyan('edited')}   ${speech.lastEditTime}`)
+      if (speech.text) {
+        fields.push(`${cyan('text')}  ${speech.text}`)
+      }
+      if (speech.language) {
+        fields.push(`${cyan('language')}  ${speech.language}`)
+      }
+      if (speech.provider) {
+        fields.push(`${cyan('provider')}  ${speech.provider}`)
+      }
+      if (speech.voice) {
+        fields.push(`${cyan('voice')}  ${speech.voice}`)
+      }
+      if (speech.translatedText) {
+        fields.push(`${cyan('translatedText')}  ${speech.translatedText}`)
+      }
+      if (speech.url) {
+        fields.push(`${cyan('url')}  ${speech.url}`)
+      }
+      if (speech.duration) {
+        fields.push(`${cyan('duration')}  ${speech.duration}`)
+      }
+      if (speech.projectId) {
+        fields.push(`${cyan('projectId')}  ${speech.projectId}`)
+      }
+      if (speech.tutorialId) {
+        fields.push(`${cyan('tutorialId')}  ${speech.tutorialId}`)
+      }
+      if (speech.creationTime) {
+        fields.push(`${cyan('created')}  ${speech.creationTime}`)
+      }
+      if (speech.lastEditTime) {
+        fields.push(`${cyan('edited')}   ${speech.lastEditTime}`)
+      }
 
       if (fields.length > 0) {
         fields.forEach(line => console.log(line))
@@ -207,7 +348,9 @@ function speechesCommand() {
         printJson({ ok: true, id: speechId, url: updated?.url })
       } else {
         console.log(`Speech ${speechId} regenerated`)
-        if (updated && updated.url) console.log(updated.url)
+        if (updated && updated.url) {
+          console.log(updated.url)
+        }
       }
     } catch (error) {
       fail(error, { json: options.json })
@@ -218,7 +361,9 @@ function speechesCommand() {
   withJson(
     command
       .command('delete <speechId>')
-      .description('delete a speech by id (also removes its S3 audio/alignment files)'),
+      .description(
+        'delete a speech by id (also removes its S3 audio/alignment files)',
+      ),
   ).action(async (speechId, options) => {
     try {
       await ensureAuth()
@@ -242,8 +387,14 @@ function speechesCommand() {
       .description(
         'delete every speech whose text contains a substring (case-insensitive)',
       )
-      .option('--contains <substring>', 'substring to match in speech text (required)')
-      .option('--projectId [projectId]', 'project id (defaults to tutorializer.json)')
+      .option(
+        '--contains <substring>',
+        'substring to match in speech text (required)',
+      )
+      .option(
+        '--projectId [projectId]',
+        'project id (defaults to tutorializer.json)',
+      )
       .option('--language [language]', 'optional language filter')
       .option('--dry-run', 'list matches without deleting', false)
       .option('--yes', 'skip confirmation prompt', false),
@@ -266,7 +417,9 @@ function speechesCommand() {
       }
 
       const parameters = { projectId, limit: 100000 }
-      if (options.language) parameters.language = options.language
+      if (options.language) {
+        parameters.language = options.language
+      }
 
       const speeches = await getSpeeches(parameters)
 
@@ -279,7 +432,9 @@ function speechesCommand() {
         if (options.json) {
           printJson({ ok: true, matched: 0, deleted: 0, failed: 0 })
         } else {
-          console.log(`No speeches in project ${projectId} contain "${substring}"`)
+          console.log(
+            `No speeches in project ${projectId} contain "${substring}"`,
+          )
         }
         return
       }
@@ -346,7 +501,12 @@ function speechesCommand() {
       }
 
       if (options.json) {
-        printJson({ ok: failed === 0, matched: matches.length, deleted, failed })
+        printJson({
+          ok: failed === 0,
+          matched: matches.length,
+          deleted,
+          failed,
+        })
       } else {
         process.stdout.write('\n')
         console.log(`Deleted ${deleted}/${matches.length} (failed: ${failed})`)
@@ -359,4 +519,4 @@ function speechesCommand() {
   return command
 }
 
-module.exports = speechesCommand
+export default speechesCommand

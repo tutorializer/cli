@@ -1,12 +1,14 @@
 /* Copyright 2026 Tutorializer LLC */
-const { inspect } = require('node:util')
-const commander = require('commander')
-const { printJson, withJson, fail } = require('@monorepool/agentfirst/output.js')
-const ensureAuth = require('./ensureAuth.js')
-const getConfig = require('./getConfig.js')
-const getVideos = require('@tutorializer/client/getVideos.js').default
-const getVideo = require('@tutorializer/client/getVideo.js').default
-const deleteVideo = require('@tutorializer/client/deleteVideo.js').default
+import { inspect } from 'node:util'
+
+import { fail, printJson, withJson } from '@monorepool/agentfirst/output.js'
+import deleteVideo from '@tutorializer/client/deleteVideo.js'
+import getVideo from '@tutorializer/client/getVideo.js'
+import getVideos from '@tutorializer/client/getVideos.js'
+import commander from 'commander'
+
+import ensureAuth from './ensureAuth.js'
+import getConfig from './getConfig.js'
 
 function videosCommand() {
   const command = new commander.Command('videos')
@@ -30,8 +32,12 @@ function videosCommand() {
       const parameters = {
         limit: options.limit || 10,
       }
-      if (projectId) parameters.projectId = projectId
-      if (options.tutorialId) parameters.tutorialId = options.tutorialId
+      if (projectId) {
+        parameters.projectId = projectId
+      }
+      if (options.tutorialId) {
+        parameters.tutorialId = options.tutorialId
+      }
 
       const videos = await getVideos(parameters)
 
@@ -49,7 +55,9 @@ function videosCommand() {
           const endTime = video.endTime
             ? new Date(video.endTime).toLocaleString()
             : ''
-          const times = startTime ? ` ${startTime}${endTime ? ` - ${endTime}` : ''}` : ''
+          const times = startTime
+            ? ` ${startTime}${endTime ? ` - ${endTime}` : ''}`
+            : ''
           console.log(`${index + 1}. ${status}${times} (${video._id})`)
         })
       }
@@ -90,8 +98,12 @@ function videosCommand() {
         const parameters = {
           limit: options.limit || 10,
         }
-        if (projectId) parameters.projectId = projectId
-        if (options.tutorialId) parameters.tutorialId = options.tutorialId
+        if (projectId) {
+          parameters.projectId = projectId
+        }
+        if (options.tutorialId) {
+          parameters.tutorialId = options.tutorialId
+        }
         const videos = await getVideos(parameters)
         if (options.json) {
           printJson(videos)
@@ -142,14 +154,34 @@ function videosCommand() {
       console.log()
 
       const fields = []
-      if (video.status) fields.push(`${cyan('status')}  ${video.status}`)
-      if (video.startTime) fields.push(`${cyan('startTime')}  ${new Date(video.startTime).toLocaleString()}`)
-      if (video.endTime) fields.push(`${cyan('endTime')}  ${new Date(video.endTime).toLocaleString()}`)
-      if (video.url) fields.push(`${cyan('url')}  ${video.url}`)
-      if (video.tutorialId) fields.push(`${cyan('tutorialId')}  ${video.tutorialId}`)
-      if (video.projectId) fields.push(`${cyan('projectId')}  ${video.projectId}`)
-      if (video.creationTime) fields.push(`${cyan('created')}  ${video.creationTime}`)
-      if (video.lastEditTime) fields.push(`${cyan('edited')}   ${video.lastEditTime}`)
+      if (video.status) {
+        fields.push(`${cyan('status')}  ${video.status}`)
+      }
+      if (video.startTime) {
+        fields.push(
+          `${cyan('startTime')}  ${new Date(video.startTime).toLocaleString()}`,
+        )
+      }
+      if (video.endTime) {
+        fields.push(
+          `${cyan('endTime')}  ${new Date(video.endTime).toLocaleString()}`,
+        )
+      }
+      if (video.url) {
+        fields.push(`${cyan('url')}  ${video.url}`)
+      }
+      if (video.tutorialId) {
+        fields.push(`${cyan('tutorialId')}  ${video.tutorialId}`)
+      }
+      if (video.projectId) {
+        fields.push(`${cyan('projectId')}  ${video.projectId}`)
+      }
+      if (video.creationTime) {
+        fields.push(`${cyan('created')}  ${video.creationTime}`)
+      }
+      if (video.lastEditTime) {
+        fields.push(`${cyan('edited')}   ${video.lastEditTime}`)
+      }
 
       if (fields.length > 0) {
         fields.forEach(line => console.log(line))
@@ -163,9 +195,7 @@ function videosCommand() {
 
   // tutorializer videos delete <videoId>
   withJson(
-    command
-      .command('delete <videoId>')
-      .description('delete a video by id'),
+    command.command('delete <videoId>').description('delete a video by id'),
   ).action(async (videoId, options) => {
     try {
       await ensureAuth()
@@ -185,4 +215,4 @@ function videosCommand() {
   return command
 }
 
-module.exports = videosCommand
+export default videosCommand

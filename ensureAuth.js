@@ -1,19 +1,20 @@
 /* Copyright 2026 Tutorializer LLC */
-const createEnsureAuth = require('@monorepool/agentfirst/ensureAuth.js')
-const loginWithBrowser = require('@monorepool/agentfirst/loginWithBrowser.js')
-const {
-  setAccessTokenForTutorializerClient,
+import createEnsureAuth from '@monorepool/agentfirst/ensureAuth.js'
+import loginWithBrowser from '@monorepool/agentfirst/loginWithBrowser.js'
+import {
   setAccessTokenCallbackForTutorializerClient,
-} = require('@tutorializer/client/accessToken.js')
-const {
-  setRefreshTokenForTutorializerClient,
+  setAccessTokenForTutorializerClient,
+} from '@tutorializer/client/accessToken.js'
+import { setApiKeyForTutorializerClient } from '@tutorializer/client/apiKey.js'
+import {
   isRefreshTokenExpired,
-} = require('@tutorializer/client/refreshToken.js')
-const {
-  setApiKeyForTutorializerClient,
-} = require('@tutorializer/client/apiKey.js')
-const getAppUrl = require('./getAppUrl.js')
-const session = require('./session.js')
+  setRefreshTokenForTutorializerClient,
+} from '@tutorializer/client/refreshToken.js'
+
+import getApiUrl from './getApiUrl.js'
+import getAppUrl from './getAppUrl.js'
+import packageJson from './package.json' with { type: 'json' }
+import session from './session.js'
 
 // Wires whatever credential this invocation has into the bundled
 // @tutorializer/client. Precedence — stored session > stored API key >
@@ -31,6 +32,7 @@ const resolveAuth = createEnsureAuth({
   envKeyName: 'TUTORIALIZER_API_KEY',
   binaryName: 'tutorializer',
   appUrl: getAppUrl(),
+  getApiUrl,
 })
 
 function rehydrateClientSession() {
@@ -45,7 +47,7 @@ function clearClientSession() {
   setRefreshTokenForTutorializerClient(null)
 }
 
-module.exports = async function ensureAuth() {
+export default async function ensureAuth() {
   let resolved = await resolveAuth()
 
   if (resolved.mode === 'token') {
@@ -69,9 +71,17 @@ module.exports = async function ensureAuth() {
 
   if (!resolved.mode) {
     // Interactive terminal with no credentials: keep the historical
-    // auto-login. resolveAuth already printed the alternatives (--with-key,
-    // TUTORIALIZER_API_KEY) to stderr, and throws instead when headless.
-    await loginWithBrowser({ appUrl: getAppUrl(), session })
+    // auto-login. resolveAuth already printed the alternatives (--device,
+    // --with-key, TUTORIALIZER_API_KEY) to stderr, and throws instead when
+    // headless. It also prints a one-time code, so a terminal on a remote
+    // desktop can be logged in from a phone.
+    await loginWithBrowser({
+      appUrl: getAppUrl(),
+      getApiUrl,
+      binaryName: 'tutorializer',
+      version: packageJson.version,
+      session,
+    })
     rehydrateClientSession()
   }
 }

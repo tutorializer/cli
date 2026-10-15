@@ -17,7 +17,7 @@ Requires Node.js 18 or newer.
 ## Quick start
 
 ```bash
-tutorializer login            # browser or API-key login (interactive chooser)
+tutorializer login            # browser, another device or API key (chooser)
 tutorializer projects list    # your projects with their ids
 tutorializer videos list --projectId PROJECT_ID
 ```
@@ -40,12 +40,22 @@ tutorializer signup --email founder@example.com --json
 
 ## Authentication
 
-Two ways in:
+Three ways in:
 
 - **Browser session** — `tutorializer login --browser` starts a temporary
   localhost server, opens your browser to app.tutorializer.com, and receives
   the session tokens on the redirect back. Tokens are stored in
   `~/.tutorializer/` and reused by every later command.
+- **Another device** — `tutorializer login --device` is for a terminal whose
+  browser you cannot use: a remote desktop without copy and paste, an SSH
+  session, a server. It prints a link, a QR code and a one-time code such as
+  `WDJB-MJHT`. Scan the QR code with your phone, or open
+  app.tutorializer.com/cli on any device where you are signed in to
+  Tutorializer and type the code; check that it matches the terminal and
+  approve. The terminal logs itself in within a couple of seconds and stores a
+  session like the browser login. The code works once and expires after ten
+  minutes. `--browser` prints the same code beside its link, so a browser that
+  opens on the wrong machine is no dead end.
 - **API key** — `tutorializer login --with-key` prompts (masked — never a
   command argument) for an API key secret created in the app, verifies it
   with one authenticated call, and stores it. Alternatively export
@@ -60,15 +70,18 @@ stored session and any stored key (an environment key stays in effect).
 Without credentials, a command run in an interactive terminal starts the
 browser login on its own; run non-interactively (no TTY) it fails immediately
 with exit code 1 and login instructions on stderr — it never opens a browser
-headlessly.
+headlessly. The automatic login prints the one-time code beside its link, and
+`tutorializer login --device` works without a terminal: it prints the link and
+the code and waits for someone to approve them.
 
 ## Commands
 
 ### Session
 
 ```bash
-tutorializer login              # choose browser or API key interactively
+tutorializer login              # choose browser, another device or API key
 tutorializer login --browser    # log in via browser; tokens land in ~/.tutorializer/
+tutorializer login --device     # approve from a phone or another computer
 tutorializer login --with-key   # paste an API key secret (masked prompt)
 tutorializer logout             # clear the stored session and any stored key
 ```
@@ -77,10 +90,14 @@ tutorializer logout             # clear the stored session and any stored key
 
 ```bash
 tutorializer projects list                    # list projects (-n/--limit, default 10)
-tutorializer projects get [projectId]         # raw JSON for one project, or the first N
-tutorializer projects read <projectId>        # formatted view: name, domain, timestamps
+tutorializer projects get [projectIdOrVanityId]  # raw JSON for one project, or the first N
+tutorializer projects read <projectIdOrVanityId> # formatted view: name, vanity id, domain, timestamps
 tutorializer projects create <name> --domain example.com   # --domain is optional
 ```
+
+The project name is case-preserving display text. The lowercase `vanityId` is
+its stable public address; `get` and `read` accept either that value or the
+immutable Project id.
 
 ### Pronunciation rules
 
@@ -100,6 +117,8 @@ tutorializer projects pronunciation remove <word> --projectId <id>
 ### Speeches
 
 ```bash
+tutorializer speeches create "Welcome to the tutorial" --projectId <id> --language en
+tutorializer speeches create "Welcome" --output public/speeches/welcome.mp3
 tutorializer speeches list --projectId <id> --language en -n 20   # default 10
 tutorializer speeches get [speechId]      # raw JSON for one speech, or a filtered list
 tutorializer speeches read <speechId>     # formatted view: text, language, url, duration
@@ -107,6 +126,12 @@ tutorializer speeches set-pronunciation <speechId> "<phonetic text>"
 tutorializer speeches delete <speechId>
 tutorializer speeches purge --contains <substring> --projectId <id> [--language en] [--dry-run] [--yes]
 ```
+
+`create` synthesizes through Tutorializer. When no provider is specified,
+Tutorializer uses ElevenLabs; when no voice is specified, it uses the
+project's default voice and finally Tutorializer's default narrator. Passing
+`--output` downloads the MP3 and its ElevenLabs alignment JSON so a repository
+can commit credential-free narration assets.
 
 `set-pronunciation` stores the pronunciation hint and triggers a server-side
 regeneration of that speech's audio. `delete` permanently removes the speech
